@@ -1,0 +1,8 @@
+.cat-info {
+  gap: 15px;
+  display: flex;
+}
+
+.p-description {
+  margin-right: 200px;
+}
