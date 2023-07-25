@@ -1,56 +1,76 @@
-import { fetchBreeds, fetchCatByBreed } from "./cat-api";
+import SlimSelect from 'slim-select';
+import 'slim-select/dist/slimselect.css';
+import { Notify } from 'notiflix/build/notiflix-notify-aio';
+import { fetchBreeds, fetchCatByBreed } from './cat-api';
 
-const select = document.querySelector(`.breed-select`);
-const loader = document.querySelector(`.loader`);
-const error = document.querySelector(`.error`);
-const div = document.querySelector(`.cat-info`);
+const bodyEl = document.querySelector('body');
 
-
-// -----
-select.style.visibility = `hidden`;
-error.style.visibility = `hidden`;
-
-fetchBreeds().then(data => {
-    loader.style.visibility = `visible`;
-    // error.style.visibility = `hidden`;
-    console.log(`fetchBreeds`)
-    loader.style.visibility = `hidden`;
-    select.style.visibility = `visible`;
-    select.innerHTML = data.map(element => `<option value="${element.id}">${element.name}</option>`).join(``);
-})
-.catch(() => error.style.visibility = `visible`)
-.finally(() => loader.style.visibility = `hidden`)
-
-
-select.addEventListener(`change`, onChangeBreed);
-
-function onChangeBreed(e) {
-    e.preventDefault();
-    let breedId = e.target.value;
-    // console.log(breedId);
-    loader.style.visibility = `visible`;
-    div.style.visibility = `hidden`;
-    fetchCatByBreed(breedId)
-        .then(data => {
-            // console.log(data);
-            loader.style.visibility = `hidden`;
-            div.style.visibility = `visible`;
-            // console.log(data);
-            div.innerHTML = data.map(element =>
-                `<div><img src="${element.url}" alt="photo cat" width="500" height="400"/></div>`).join(``)
-            data.map(el => el.breeds.forEach(cat => {
-                const array = [cat];
-                const findCat = array.find(option => option.id === breedId);
-                console.log(findCat.description);
-                const makrup = `<div class="cat-card">
-                <h2>${findCat.name}</h2>
-                <p class="p-description">${findCat.description}</p>
-                <h3>Temperament</h3>
-                <p>${findCat.temperament}</p>
-                </div>`
-                div.insertAdjacentHTML(`beforeend`, makrup)
-            }))
-        })
-        .catch(() => error.style.visibility = `visible`)
-        .finally(() => loader.style.visibility = `hidden`)
+const refs = {
+  selectBreedEl: findRef(bodyEl.children, 'breed-select'),
+  loaderEl: findRef(bodyEl.children, 'wrapper-loader'),
+  errorEl: findRef(bodyEl.children, 'error'),
+  breedInfoEl: findRef(bodyEl.children, 'cat-info'),
 };
+
+hideElement(refs.errorEl, refs.selectBreedEl);
+
+window.addEventListener('load', onLoad);
+refs.selectBreedEl.addEventListener('change', onSelect);
+function showElement(...elems) {
+  elems.forEach(i => i.classList.remove('hidden'));
+}
+
+function onLoad() {
+  fetchBreeds('/breeds')
+    .then(data => {
+      refs.selectBreedEl.innerHTML = createMarkupSelect(data);
+      new SlimSelect({
+        select: '.breed-select',
+      });
+      hideElement(refs.loaderEl, refs.selectBreedEl);
+    })
+    .catch(() =>
+      Notify.failure('Oops! Something went wrong! Try reloading the page!')
+    );
+}
+
+function onSelect(evt) {
+  hideElement(refs.breedInfoEl); 
+  showElement(refs.loaderEl); 
+
+  fetchCatByBreed('images/search', evt.target.value)
+    .then(resp => {
+      refs.breedInfoEl.innerHTML = createMarkupInfo(resp[0]);
+      refs.breedInfoEl.style.display = 'flex';
+      refs.breedInfoEl.style.gap = '20px';
+      hideElement(refs.loaderEl);
+    })
+    .catch(() => {
+      Notify.failure('Oops! Something went wrong! Try reloading the page!');
+      hideElement(refs.loaderEl); 
+    });
+}
+
+function createMarkupSelect(arr) {
+  return (
+    '<option value="" disabled selected>Choose your cat...</option>' +
+    arr.map(({ id, name }) => `<option value=${id}>${name}</option>`).join('')
+  );
+}
+
+function createMarkupInfo({ url, breeds }) {
+  const { name, temperament, description } = breeds[0];
+  return `<img src="${url}" alt="${name}" width = 450>
+      <div><h2>Breed: ${name}</h2>
+      <h3>Temperament: ${temperament}</h3>
+      <h4>Description</h4>
+      <p>${description}</p></div>`;
+}
+
+function hideElement(...elems) {
+  elems.forEach(i => i.classList.toggle('hidden'));
+}
+
+function findRef(queryEl, classN) {
+  return [...queryEl].find(i => i.className === classN);
+}
