@@ -16,9 +16,6 @@ hideElement(refs.errorEl, refs.selectBreedEl);
 
 window.addEventListener('load', onLoad);
 refs.selectBreedEl.addEventListener('change', onSelect);
-function showElement(...elems) {
-  elems.forEach(i => i.classList.remove('hidden'));
-}
 
 function onLoad() {
   fetchBreeds('/breeds')
@@ -35,20 +32,15 @@ function onLoad() {
 }
 
 function onSelect(evt) {
-  hideElement(refs.breedInfoEl); 
-  showElement(refs.loaderEl); 
-
   fetchCatByBreed('images/search', evt.target.value)
     .then(resp => {
       refs.breedInfoEl.innerHTML = createMarkupInfo(resp[0]);
       refs.breedInfoEl.style.display = 'flex';
       refs.breedInfoEl.style.gap = '20px';
-      hideElement(refs.loaderEl);
     })
-    .catch(() => {
-      Notify.failure('Oops! Something went wrong! Try reloading the page!');
-      hideElement(refs.loaderEl); 
-    });
+    .catch(() =>
+      Notify.failure('Oops! Something went wrong! Try reloading the page!')
+    );
 }
 
 function createMarkupSelect(arr) {
